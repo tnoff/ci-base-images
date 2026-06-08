@@ -1,0 +1,143 @@
+# All github-workflows refs pinned to the merge SHA of !31 (v0.0.48 — adds
+# TAG_OVERRIDE + TOX_BASE_IMAGE). Renovate will bump these on subsequent
+# template releases.
+include:
+  - project: 'tnoff-projects/github-workflows'
+    ref: ea299f889f8b81b24bd31ea8481c5edebcf56d55
+    file: '/gitlab/tag.yml'
+  - project: 'tnoff-projects/github-workflows'
+    ref: ea299f889f8b81b24bd31ea8481c5edebcf56d55
+    file: '/gitlab/buildkit-docker-push.yml'
+  - project: 'tnoff-projects/github-workflows'
+    ref: ea299f889f8b81b24bd31ea8481c5edebcf56d55
+    file: '/gitlab/renovate.yml'
+  - project: 'tnoff-projects/github-workflows'
+    ref: ea299f889f8b81b24bd31ea8481c5edebcf56d55
+    file: '/gitlab/bump-version.yml'
+  - project: 'tnoff-projects/github-workflows'
+    ref: ea299f889f8b81b24bd31ea8481c5edebcf56d55
+    file: '/gitlab/trufflehog.yml'
+  - project: 'tnoff-projects/github-workflows'
+    ref: ea299f889f8b81b24bd31ea8481c5edebcf56d55
+    file: '/gitlab/discord-notify.yml'
+
+default:
+  tags:
+    - self-hosted
+
+stages:
+  - validate
+  - build
+  - tag
+  - notify
+  - renovate
+
+# Renovate-driven minor bump on MRs branched from /^renovate\/dev-/.
+bump-version:
+  extends: .bump-version
+  variables:
+    GITLAB_PUSH_TOKEN: $RENOVATE_TOKEN
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^renovate\/dev-/
+
+trufflehog:
+  extends: .trufflehog
+  stage: validate
+  rules:
+    # Fork MRs require a project member to manually trigger jobs — prevents untrusted code from running CI automatically
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# Guard rail: the matrix in `build:` below must stay in sync with the
+# env_list in tox.ini. tox.ini is the documented "what Python minors do
+# we publish" declaration; the matrix is the operational one. This job
+# fails the pipeline if they drift.
+matrix-sync-check:
+  stage: validate
+  image: docker.io/library/python:3.14-slim
+  before_script:
+    - pip install tox pyyaml
+  script:
+    - |
+      python3 - <<'PYEOF'
+      import re, subprocess, yaml
+
+      result = subprocess.run(['tox', '-l'], capture_output=True, text=True, check=True)
+      tox_versions = set()
+      for env in result.stdout.strip().splitlines():
+          m = re.fullmatch(r'py(\d)(\d+)', env)
+          if m:
+              tox_versions.add(f'{m.group(1)}.{m.group(2)}')
+
+      with open('.gitlab-ci.yml') as f:
+          ci = yaml.safe_load(f)
+      matrix_versions = set(ci['build']['parallel']['matrix'][0]['PYTHON_VERSION'])
+
+      if tox_versions != matrix_versions:
+          raise SystemExit(
+              f'tox.ini and .gitlab-ci.yml matrix have drifted.\n'
+              f'  tox.ini env_list:    {sorted(tox_versions)}\n'
+              f'  build matrix:        {sorted(matrix_versions)}\n'
+              f'Update both when adding/removing a Python minor.'
+          )
+      print(f'Matrix in sync: {sorted(tox_versions)}')
+      PYEOF
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+
+# One :3.X mutable + :3.X-<short-sha> immutable tag per Python minor.
+# Add a new minor here AND in tox.ini together — matrix-sync-check enforces.
+build:
+  extends: .buildkit-docker-push
+  stage: build
+  parallel:
+    matrix:
+      - PYTHON_VERSION: ["3.11", "3.12", "3.13", "3.14"]
+  variables:
+    DOCKERFILE_DIR: python
+    BUILD_ARGS: '--opt build-arg:PYTHON_VERSION=$PYTHON_VERSION'
+    TAG_OVERRIDE: '$PYTHON_VERSION'
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+
+tag-build:
+  extends: .tag
+  stage: tag
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+      when: on_success
+
+notify-failure:
+  extends: .discord-notify
+  stage: notify
+  needs: [build, tag-build]
+  variables:
+    NOTIFY_TYPE: failure
+    DISCORD_WEBHOOK_URL: $DISCORD_BUILD_FAILURE_WEBHOOK
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+      when: on_failure
+
+notify-renovate-failure:
+  extends: .discord-notify
+  stage: renovate
+  needs: [renovate]
+  variables:
+    NOTIFY_TYPE: failure
+    DISCORD_WEBHOOK_URL: $DISCORD_BUILD_FAILURE_WEBHOOK
+    NOTIFY_MESSAGE: 'Renovate failed'
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: on_failure
+
+renovate:
+  extends: .renovate
+  stage: renovate
+  variables:
+    GITHUB_COM_TOKEN: $GITHUB_BOT_TOKEN
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"

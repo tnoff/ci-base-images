@@ -20,6 +20,9 @@ include:
   - project: 'tnoff-projects/github-workflows'
     ref: ea299f889f8b81b24bd31ea8481c5edebcf56d55
     file: '/gitlab/discord-notify.yml'
+  - project: 'tnoff-projects/github-workflows'
+    ref: ea299f889f8b81b24bd31ea8481c5edebcf56d55
+    file: '/gitlab/trigger-bump.yml'
 
 default:
   tags:
@@ -110,6 +113,21 @@ tag-build:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
       when: on_success
+
+# Fire the shared docker-apps pipeline trigger after every successful build
+# so docker-apps' cleanup-ci-base-images job spawns a one-off Job that
+# prunes old :3.X-<sha> tags from OCIR. Doesn't pin any docker-apps
+# manifest — this repo's image isn't referenced by any K8s workload.
+# IMAGE is set inline (the .trigger-bump template's err-check requires
+# it); CI_BASE_IMAGE_PATH is the plaintext group variable provisioned
+# in terraform/infra/gitlab.tf.
+trigger-cleanup:
+  extends: .trigger-bump
+  stage: tag
+  needs: [build]
+  variables:
+    BUMP_SOURCE: 'ci-base-images'
+    IMAGE: '$CI_BASE_IMAGE_PATH'
 
 notify-failure:
   extends: .discord-notify

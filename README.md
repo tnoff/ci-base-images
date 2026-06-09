@@ -2,7 +2,7 @@
 
 Python CI runtime base images — one image per supported Python minor,
 pre-baked with `git` + the OS deps the Python fleet's CI matrix needs
-(currently `ffmpeg`, `postgresql-client`). Pushed to OCIR so the tox
+(currently `ffmpeg`, `postgresql`). Pushed to OCIR so the tox
 matrix in downstream repos skips the apt-install preamble entirely.
 
 ## What this publishes

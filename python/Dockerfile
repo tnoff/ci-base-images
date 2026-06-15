@@ -13,6 +13,7 @@ FROM python:${PYTHON_VERSION}-slim-bookworm
 # silently skip the cluster start and break every test that touches the DB.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
+        build-essential \
         git \
         ffmpeg \
         postgresql && \

@@ -107,6 +107,37 @@ build:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
 
+# Single-tag images (:latest + :<sha>) for non-Python CI tooling.
+# OCI_REPO_NAME_64 is overridden per job to push to the correct OCIR repo;
+# OCI_USERNAME_64 / OCI_TOKEN_64 are the same ci-base-images push user
+# (its IAM policy covers all ci-* repos).
+build-spellcheck:
+  extends: .buildkit-docker-push
+  stage: build
+  variables:
+    DOCKERFILE_DIR: spellcheck
+    OCI_REPO_NAME_64: $OCI_SPELLCHECK_REPO_NAME_64
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+
+build-rust-tauri:
+  extends: .buildkit-docker-push
+  stage: build
+  variables:
+    DOCKERFILE_DIR: rust-tauri
+    OCI_REPO_NAME_64: $OCI_RUST_TAURI_REPO_NAME_64
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+
+build-k8s-lint:
+  extends: .buildkit-docker-push
+  stage: build
+  variables:
+    DOCKERFILE_DIR: k8s-lint
+    OCI_REPO_NAME_64: $OCI_K8S_LINT_REPO_NAME_64
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+
 tag-build:
   extends: .tag
   stage: tag
@@ -132,7 +163,7 @@ trigger-cleanup:
 notify-failure:
   extends: .discord-notify
   stage: notify
-  needs: [build, tag-build]
+  needs: [build, build-spellcheck, build-rust-tauri, build-k8s-lint, tag-build]
   variables:
     NOTIFY_TYPE: failure
     DISCORD_WEBHOOK_URL: $DISCORD_BUILD_FAILURE_WEBHOOK

@@ -66,6 +66,13 @@ matrix-sync-check:
       python3 - <<'PYEOF'
       import re, subprocess, yaml
 
+      # GitLab's !reference tag isn't a standard YAML construct, so PyYAML's
+      # SafeLoader refuses to parse it. We only need build.parallel.matrix,
+      # which contains no !reference, so treat the tag as opaque.
+      class GLLoader(yaml.SafeLoader):
+          pass
+      GLLoader.add_constructor('!reference', lambda loader, node: None)
+
       result = subprocess.run(['tox', '-l'], capture_output=True, text=True, check=True)
       tox_versions = set()
       for env in result.stdout.strip().splitlines():
@@ -74,7 +81,7 @@ matrix-sync-check:
               tox_versions.add(f'{m.group(1)}.{m.group(2)}')
 
       with open('.gitlab-ci.yml') as f:
-          ci = yaml.safe_load(f)
+          ci = yaml.load(f, Loader=GLLoader)
       matrix_versions = set(ci['build']['parallel']['matrix'][0]['PYTHON_VERSION'])
 
       if tox_versions != matrix_versions:
@@ -108,15 +115,25 @@ build:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
 
 # Single-tag images (:latest + :<sha>) for non-Python CI tooling.
-# OCI_REPO_NAME_64 is overridden per job to push to the correct OCIR repo;
 # OCI_USERNAME_64 / OCI_TOKEN_64 are the same ci-base-images push user
 # (its IAM policy covers all ci-* repos).
+#
+# OCI_REPO_NAME_64 is exported in before_script from the per-image var
+# rather than set as `OCI_REPO_NAME_64: $OCI_X_REPO_NAME_64` at the YAML
+# level, because GitLab does not reliably substitute when both sides are
+# masked CI variables — the override silently no-ops and OCI_REPO_NAME_64
+# falls back to the project default (ci-base-images), so the image would
+# get pushed to iad.ocir.io/tnoff/ci-base-images:latest, clobbering it.
+# Shell expansion of the masked var at runtime always works. See
+# discord-bot/.gitlab-ci.yml's docker-push-dispatcher for the same pattern.
 build-spellcheck:
   extends: .buildkit-docker-push
   stage: build
   variables:
     DOCKERFILE_DIR: spellcheck
-    OCI_REPO_NAME_64: $OCI_SPELLCHECK_REPO_NAME_64
+  before_script:
+    - export OCI_REPO_NAME_64="$OCI_SPELLCHECK_REPO_NAME_64"
+    - !reference [.buildkit-docker-push, before_script]
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
 
@@ -125,7 +142,9 @@ build-rust-tauri:
   stage: build
   variables:
     DOCKERFILE_DIR: rust-tauri
-    OCI_REPO_NAME_64: $OCI_RUST_TAURI_REPO_NAME_64
+  before_script:
+    - export OCI_REPO_NAME_64="$OCI_RUST_TAURI_REPO_NAME_64"
+    - !reference [.buildkit-docker-push, before_script]
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
 
@@ -134,7 +153,9 @@ build-k8s-lint:
   stage: build
   variables:
     DOCKERFILE_DIR: k8s-lint
-    OCI_REPO_NAME_64: $OCI_K8S_LINT_REPO_NAME_64
+  before_script:
+    - export OCI_REPO_NAME_64="$OCI_K8S_LINT_REPO_NAME_64"
+    - !reference [.buildkit-docker-push, before_script]
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
 

@@ -19,3 +19,8 @@ RUN apt-get update && \
         postgresql && \
     apt-get upgrade -y --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
+
+# diff-cover is used by github-workflows' tox-pipeline coverage stage,
+# not by project tests. Baking it here lets the diff-cover child job
+# skip `pip install diff-cover` when TOX_BASE_IMAGE is set.
+RUN pip install --no-cache-dir diff-cover

@@ -20,7 +20,9 @@ RUN apt-get update && \
     apt-get upgrade -y --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-# diff-cover is used by github-workflows' tox-pipeline coverage stage,
-# not by project tests. Baking it here lets the diff-cover child job
-# skip `pip install diff-cover` when TOX_BASE_IMAGE is set.
-RUN pip install --no-cache-dir diff-cover
+# diff-cover and tox are used by github-workflows' tox-pipeline template,
+# not by project tests. Baking them here lets the tox-pipeline jobs skip
+# their inline `pip install diff-cover` / `pip install tox` — the child
+# tox job and the diff-cover child job rely on TOX_BASE_IMAGE; the parent
+# `.tox-generate` job relies on TOX_GENERATE_IMAGE pointing at this image.
+RUN pip install --no-cache-dir diff-cover tox

@@ -160,6 +160,37 @@ trigger-cleanup:
     BUMP_SOURCE: 'ci-base-images'
     IMAGE: '$CI_BASE_IMAGE_PATH'
 
+# Single-tag siblings of trigger-cleanup. Each one fires after its own
+# build-* succeeds (independent needs so a failed rust-tauri build doesn't
+# block the spellcheck cleanup). BUMP_SOURCE values match docker-apps'
+# cleanup-ci-* jobs and the cleanup-ci-<image> suspended CronJob templates.
+# IMAGE is hardcoded — docker-apps' cleanup-* jobs only consume BUMP_SOURCE
+# and IMAGE_TAG (the git short SHA), but the .trigger-bump template's
+# err-check requires IMAGE to be non-empty.
+trigger-cleanup-spellcheck:
+  extends: .trigger-bump
+  stage: tag
+  needs: [build-spellcheck]
+  variables:
+    BUMP_SOURCE: 'ci-spellcheck'
+    IMAGE: 'iad.ocir.io/tnoff/ci-spellcheck'
+
+trigger-cleanup-rust-tauri:
+  extends: .trigger-bump
+  stage: tag
+  needs: [build-rust-tauri]
+  variables:
+    BUMP_SOURCE: 'ci-rust-tauri'
+    IMAGE: 'iad.ocir.io/tnoff/ci-rust-tauri'
+
+trigger-cleanup-k8s-lint:
+  extends: .trigger-bump
+  stage: tag
+  needs: [build-k8s-lint]
+  variables:
+    BUMP_SOURCE: 'ci-k8s-lint'
+    IMAGE: 'iad.ocir.io/tnoff/ci-k8s-lint'
+
 notify-failure:
   extends: .discord-notify
   stage: notify

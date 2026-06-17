@@ -306,6 +306,17 @@ build-k8s-lint:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
 
+build-alpine-utils:
+  extends: .buildkit-docker-push
+  stage: build
+  variables:
+    DOCKERFILE_DIR: alpine-utils
+  before_script:
+    - export OCI_REPO_NAME_64="$OCI_ALPINE_UTILS_REPO_NAME_64"
+    - !reference [.buildkit-docker-push, before_script]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+
 tag-build:
   extends: .tag
   stage: tag
@@ -359,10 +370,18 @@ trigger-cleanup-k8s-lint:
     BUMP_SOURCE: 'ci-k8s-lint'
     IMAGE: 'iad.ocir.io/tnoff/ci-k8s-lint'
 
+trigger-cleanup-alpine-utils:
+  extends: .trigger-bump
+  stage: tag
+  needs: [build-alpine-utils]
+  variables:
+    BUMP_SOURCE: 'ci-alpine-utils'
+    IMAGE: 'iad.ocir.io/tnoff/ci-alpine-utils'
+
 notify-failure:
   extends: .discord-notify
   stage: notify
-  needs: [build, build-spellcheck, build-rust-tauri, build-k8s-lint, tag-build]
+  needs: [build, build-spellcheck, build-rust-tauri, build-k8s-lint, build-alpine-utils, tag-build]
   variables:
     NOTIFY_TYPE: failure
     DISCORD_WEBHOOK_URL: $DISCORD_BUILD_FAILURE_WEBHOOK

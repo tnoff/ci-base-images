@@ -23,6 +23,12 @@ include:
   - project: 'tnoff-projects/github-workflows'
     ref: 3dc971c41a156e3e17ce1824fb27c5b731b17433
     file: '/gitlab/trigger-bump.yml'
+  - project: 'tnoff-projects/github-workflows'
+    ref: 3dc971c41a156e3e17ce1824fb27c5b731b17433
+    file: '/gitlab/buildkit-build-check.yml'
+  - project: 'tnoff-projects/github-workflows'
+    ref: 3dc971c41a156e3e17ce1824fb27c5b731b17433
+    file: '/gitlab/trufflehog-image.yml'
 
 default:
   tags:
@@ -98,6 +104,147 @@ matrix-sync-check:
       when: manual
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+
+# MR-time image validation. The push-side build-* jobs above only run on
+# main, so without these an MR that edits a Dockerfile merges unbuilt — a
+# broken apt/apk line surfaces only post-merge via notify-failure. Each
+# build-check-* compiles its image with buildkit (no push, no creds) and
+# emits a docker-save tarball; the paired trufflehog-image-* scans that
+# tarball for secrets baked into a layer.
+#
+# Gated on `changes:` to each image's own dir, so a Dockerfile edit builds +
+# scans only the image it touches (Dockerfile edits are rare — Renovate base
+# bumps + manual dep changes — so the extra load on the concurrent:2 ci pool
+# is bounded). The push side handles main; these are MR-only.
+#
+# python: the apt layer is identical Debian-bookworm across all four minors
+# (only the PYTHON_VERSION build-arg base image differs), so one build-check
+# on the default minor validates the Dockerfile for the whole 3.11–3.14
+# matrix that build: publishes.
+build-check-python:
+  extends: .buildkit-build-check
+  stage: validate
+  variables:
+    DOCKERFILE_DIR: python
+    OUTPUT_NAME: ci-base-images-python:ci
+    OUTPUT_TARBALL: python.tar
+    CACHE_NAME: ci-base-images-python
+  rules: &python-image-rules
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - python/**/*
+
+trufflehog-image-python:
+  extends: .trufflehog-image
+  stage: validate
+  needs:
+    - job: build-check-python
+      artifacts: true
+  variables:
+    TRUFFLEHOG_IMAGE_TARBALL: python.tar
+  rules: *python-image-rules
+
+build-check-spellcheck:
+  extends: .buildkit-build-check
+  stage: validate
+  variables:
+    DOCKERFILE_DIR: spellcheck
+    OUTPUT_NAME: ci-spellcheck:ci
+    OUTPUT_TARBALL: spellcheck.tar
+    CACHE_NAME: ci-base-images-spellcheck
+  rules: &spellcheck-image-rules
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - spellcheck/**/*
+
+trufflehog-image-spellcheck:
+  extends: .trufflehog-image
+  stage: validate
+  needs:
+    - job: build-check-spellcheck
+      artifacts: true
+  variables:
+    TRUFFLEHOG_IMAGE_TARBALL: spellcheck.tar
+  rules: *spellcheck-image-rules
+
+build-check-rust-tauri:
+  extends: .buildkit-build-check
+  stage: validate
+  variables:
+    DOCKERFILE_DIR: rust-tauri
+    OUTPUT_NAME: ci-rust-tauri:ci
+    OUTPUT_TARBALL: rust-tauri.tar
+    CACHE_NAME: ci-base-images-rust-tauri
+  rules: &rust-tauri-image-rules
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - rust-tauri/**/*
+
+trufflehog-image-rust-tauri:
+  extends: .trufflehog-image
+  stage: validate
+  needs:
+    - job: build-check-rust-tauri
+      artifacts: true
+  variables:
+    TRUFFLEHOG_IMAGE_TARBALL: rust-tauri.tar
+  rules: *rust-tauri-image-rules
+
+build-check-k8s-lint:
+  extends: .buildkit-build-check
+  stage: validate
+  variables:
+    DOCKERFILE_DIR: k8s-lint
+    OUTPUT_NAME: ci-k8s-lint:ci
+    OUTPUT_TARBALL: k8s-lint.tar
+    CACHE_NAME: ci-base-images-k8s-lint
+  rules: &k8s-lint-image-rules
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - k8s-lint/**/*
+
+trufflehog-image-k8s-lint:
+  extends: .trufflehog-image
+  stage: validate
+  needs:
+    - job: build-check-k8s-lint
+      artifacts: true
+  variables:
+    TRUFFLEHOG_IMAGE_TARBALL: k8s-lint.tar
+  rules: *k8s-lint-image-rules
+
+build-check-alpine-utils:
+  extends: .buildkit-build-check
+  stage: validate
+  variables:
+    DOCKERFILE_DIR: alpine-utils
+    OUTPUT_NAME: ci-alpine-utils:ci
+    OUTPUT_TARBALL: alpine-utils.tar
+    CACHE_NAME: ci-base-images-alpine-utils
+  rules: &alpine-utils-image-rules
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - alpine-utils/**/*
+
+trufflehog-image-alpine-utils:
+  extends: .trufflehog-image
+  stage: validate
+  needs:
+    - job: build-check-alpine-utils
+      artifacts: true
+  variables:
+    TRUFFLEHOG_IMAGE_TARBALL: alpine-utils.tar
+  rules: *alpine-utils-image-rules
 
 # One :3.X mutable + :3.X-<short-sha> immutable tag per Python minor.
 # Add a new minor here AND in tox.ini together — matrix-sync-check enforces.

@@ -246,6 +246,81 @@ trufflehog-image-alpine-utils:
     TRUFFLEHOG_IMAGE_TARBALL: alpine-utils.tar
   rules: *alpine-utils-image-rules
 
+build-check-pre-commit:
+  extends: .buildkit-build-check
+  stage: validate
+  variables:
+    DOCKERFILE_DIR: pre-commit
+    OUTPUT_NAME: ci-pre-commit:ci
+    OUTPUT_TARBALL: pre-commit.tar
+    CACHE_NAME: ci-base-images-pre-commit
+  rules: &pre-commit-image-rules
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - pre-commit/**/*
+
+trufflehog-image-pre-commit:
+  extends: .trufflehog-image
+  stage: validate
+  needs:
+    - job: build-check-pre-commit
+      artifacts: true
+  variables:
+    TRUFFLEHOG_IMAGE_TARBALL: pre-commit.tar
+  rules: *pre-commit-image-rules
+
+build-check-terragrunt-utils:
+  extends: .buildkit-build-check
+  stage: validate
+  variables:
+    DOCKERFILE_DIR: terragrunt-utils
+    OUTPUT_NAME: ci-terragrunt-utils:ci
+    OUTPUT_TARBALL: terragrunt-utils.tar
+    CACHE_NAME: ci-base-images-terragrunt-utils
+  rules: &terragrunt-utils-image-rules
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - terragrunt-utils/**/*
+
+trufflehog-image-terragrunt-utils:
+  extends: .trufflehog-image
+  stage: validate
+  needs:
+    - job: build-check-terragrunt-utils
+      artifacts: true
+  variables:
+    TRUFFLEHOG_IMAGE_TARBALL: terragrunt-utils.tar
+  rules: *terragrunt-utils-image-rules
+
+build-check-trufflehog:
+  extends: .buildkit-build-check
+  stage: validate
+  variables:
+    DOCKERFILE_DIR: trufflehog
+    OUTPUT_NAME: ci-trufflehog:ci
+    OUTPUT_TARBALL: trufflehog.tar
+    CACHE_NAME: ci-base-images-trufflehog
+  rules: &trufflehog-image-rules
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - trufflehog/**/*
+
+trufflehog-image-trufflehog:
+  extends: .trufflehog-image
+  stage: validate
+  needs:
+    - job: build-check-trufflehog
+      artifacts: true
+  variables:
+    TRUFFLEHOG_IMAGE_TARBALL: trufflehog.tar
+  rules: *trufflehog-image-rules
+
 # One :3.X mutable + :3.X-<short-sha> immutable tag per Python minor.
 # Add a new minor here AND in tox.ini together — matrix-sync-check enforces.
 build:
@@ -317,6 +392,39 @@ build-alpine-utils:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
 
+build-pre-commit:
+  extends: .buildkit-docker-push
+  stage: build
+  variables:
+    DOCKERFILE_DIR: pre-commit
+  before_script:
+    - export OCI_REPO_NAME_64="$OCI_PRE_COMMIT_REPO_NAME_64"
+    - !reference [.buildkit-docker-push, before_script]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+
+build-terragrunt-utils:
+  extends: .buildkit-docker-push
+  stage: build
+  variables:
+    DOCKERFILE_DIR: terragrunt-utils
+  before_script:
+    - export OCI_REPO_NAME_64="$OCI_TERRAGRUNT_UTILS_REPO_NAME_64"
+    - !reference [.buildkit-docker-push, before_script]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+
+build-trufflehog:
+  extends: .buildkit-docker-push
+  stage: build
+  variables:
+    DOCKERFILE_DIR: trufflehog
+  before_script:
+    - export OCI_REPO_NAME_64="$OCI_TRUFFLEHOG_REPO_NAME_64"
+    - !reference [.buildkit-docker-push, before_script]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+
 tag-build:
   extends: .tag
   stage: tag
@@ -378,10 +486,34 @@ trigger-cleanup-alpine-utils:
     BUMP_SOURCE: 'ci-alpine-utils'
     IMAGE: 'iad.ocir.io/tnoff/ci-alpine-utils'
 
+trigger-cleanup-pre-commit:
+  extends: .trigger-bump
+  stage: tag
+  needs: [build-pre-commit]
+  variables:
+    BUMP_SOURCE: 'ci-pre-commit'
+    IMAGE: 'iad.ocir.io/tnoff/ci-pre-commit'
+
+trigger-cleanup-terragrunt-utils:
+  extends: .trigger-bump
+  stage: tag
+  needs: [build-terragrunt-utils]
+  variables:
+    BUMP_SOURCE: 'ci-terragrunt-utils'
+    IMAGE: 'iad.ocir.io/tnoff/ci-terragrunt-utils'
+
+trigger-cleanup-trufflehog:
+  extends: .trigger-bump
+  stage: tag
+  needs: [build-trufflehog]
+  variables:
+    BUMP_SOURCE: 'ci-trufflehog'
+    IMAGE: 'iad.ocir.io/tnoff/ci-trufflehog'
+
 notify-failure:
   extends: .discord-notify
   stage: notify
-  needs: [build, build-spellcheck, build-rust-tauri, build-k8s-lint, build-alpine-utils, tag-build]
+  needs: [build, build-spellcheck, build-rust-tauri, build-k8s-lint, build-alpine-utils, build-pre-commit, build-terragrunt-utils, build-trufflehog, tag-build]
   variables:
     NOTIFY_TYPE: failure
     DISCORD_WEBHOOK_URL: $DISCORD_BUILD_FAILURE_WEBHOOK

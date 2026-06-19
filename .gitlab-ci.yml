@@ -333,6 +333,10 @@ build:
     DOCKERFILE_DIR: python
     BUILD_ARGS: '--opt build-arg:PYTHON_VERSION=$PYTHON_VERSION'
     TAG_OVERRIDE: '$PYTHON_VERSION'
+    # Shared across the 4 minors (matches build-check-python) so MR build-check
+    # and main push reuse the same S3 cache namespace, separate from the
+    # single-tag images below.
+    CACHE_NAME: ci-base-images-python
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
 
@@ -353,6 +357,7 @@ build-spellcheck:
   stage: build
   variables:
     DOCKERFILE_DIR: spellcheck
+    CACHE_NAME: ci-base-images-spellcheck
   before_script:
     - export OCI_REPO_NAME_64="$OCI_SPELLCHECK_REPO_NAME_64"
     - !reference [.buildkit-docker-push, before_script]
@@ -364,6 +369,7 @@ build-rust-tauri:
   stage: build
   variables:
     DOCKERFILE_DIR: rust-tauri
+    CACHE_NAME: ci-base-images-rust-tauri
   before_script:
     - export OCI_REPO_NAME_64="$OCI_RUST_TAURI_REPO_NAME_64"
     - !reference [.buildkit-docker-push, before_script]
@@ -375,6 +381,7 @@ build-k8s-lint:
   stage: build
   variables:
     DOCKERFILE_DIR: k8s-lint
+    CACHE_NAME: ci-base-images-k8s-lint
   before_script:
     - export OCI_REPO_NAME_64="$OCI_K8S_LINT_REPO_NAME_64"
     - !reference [.buildkit-docker-push, before_script]
@@ -386,6 +393,7 @@ build-alpine-utils:
   stage: build
   variables:
     DOCKERFILE_DIR: alpine-utils
+    CACHE_NAME: ci-base-images-alpine-utils
   before_script:
     - export OCI_REPO_NAME_64="$OCI_ALPINE_UTILS_REPO_NAME_64"
     - !reference [.buildkit-docker-push, before_script]
@@ -397,6 +405,7 @@ build-pre-commit:
   stage: build
   variables:
     DOCKERFILE_DIR: pre-commit
+    CACHE_NAME: ci-base-images-pre-commit
   before_script:
     - export OCI_REPO_NAME_64="$OCI_PRE_COMMIT_REPO_NAME_64"
     - !reference [.buildkit-docker-push, before_script]
@@ -408,6 +417,7 @@ build-terragrunt-utils:
   stage: build
   variables:
     DOCKERFILE_DIR: terragrunt-utils
+    CACHE_NAME: ci-base-images-terragrunt-utils
   before_script:
     - export OCI_REPO_NAME_64="$OCI_TERRAGRUNT_UTILS_REPO_NAME_64"
     - !reference [.buildkit-docker-push, before_script]
@@ -419,6 +429,7 @@ build-trufflehog:
   stage: build
   variables:
     DOCKERFILE_DIR: trufflehog
+    CACHE_NAME: ci-base-images-trufflehog
   before_script:
     - export OCI_REPO_NAME_64="$OCI_TRUFFLEHOG_REPO_NAME_64"
     - !reference [.buildkit-docker-push, before_script]

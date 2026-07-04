@@ -44,13 +44,19 @@ stages:
   - notify
   - renovate
 
-# Renovate-driven minor bump on MRs branched from /^renovate\/dev-/.
+# Renovate-driven patch bump on every /^renovate\// MR. Unlike the Python
+# repos, this repo doesn't extend the github-workflows renovate/python preset
+# that adds the dev-/test- branch prefixes, so all of its bumps — base images
+# (dockerfile), the baked tool-version ARGs + github-workflows include digest
+# (custom.regex) — land on unprefixed renovate/ branches. Gating on the whole
+# namespace (not just renovate/dev-) means each dependency bump cuts its own
+# VERSION patch and gets its own v<VERSION> tag on merge.
 bump-version:
   extends: .bump-version
   variables:
     GITLAB_PUSH_TOKEN: $RENOVATE_TOKEN
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^renovate\/dev-/
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^renovate\//
 
 trufflehog:
   extends: .trufflehog

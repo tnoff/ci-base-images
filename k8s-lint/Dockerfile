@@ -1,12 +1,16 @@
 FROM python:3.14-slim-bookworm
 
+# renovate: datasource=github-releases depName=yannh/kubeconform
 ARG KUBECONFORM_VERSION=0.6.7
+# renovate: datasource=github-releases depName=stackrox/kube-linter
 ARG KUBE_LINTER_VERSION=0.7.2
+# renovate: datasource=github-releases depName=open-policy-agent/conftest
 ARG CONFTEST_VERSION=0.67.0
 
 # Binaries are arm64-only — this image is built exclusively for linux/arm64
-# (the OKE self-hosted runner pool). Update ARG defaults when bumping tool
-# versions; Renovate is not yet wired for these ARGs.
+# (the OKE self-hosted runner pool). The version ARGs are Renovate-managed via
+# the `# renovate:` annotations above (github-releases datasource in
+# renovate.json).
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         git \

@@ -1,5 +1,17 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["gitlab>tnoff-projects/github-workflows//renovate/default"],
-  "enabledManagers": ["dockerfile", "gitlabci", "gitlabci-include", "custom.regex"]
+  "enabledManagers": ["dockerfile", "gitlabci", "gitlabci-include", "custom.regex"],
+  "customManagers": [
+    {
+      "description": "Bump the pinned CLI-tool versions baked into the image Dockerfiles as ARG defaults (trufflehog, kubeconform, kube-linter, conftest). These are fetched from GitHub release tarballs, not a package registry, so the dockerfile manager can't see them — a `# renovate:` annotation above each ARG drives a github-releases lookup. extractVersion strips the leading `v` from release tags so they compare against the un-prefixed ARG value.",
+      "customType": "regex",
+      "managerFilePatterns": ["/(^|/)Dockerfile$/"],
+      "versioningTemplate": "semver",
+      "extractVersionTemplate": "^v(?<version>.+)$",
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+ARG \\w+=(?<currentValue>[^\\s]+)"
+      ]
+    }
+  ]
 }

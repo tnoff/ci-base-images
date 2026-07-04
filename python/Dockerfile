@@ -16,7 +16,8 @@ RUN apt-get update && \
         build-essential \
         git \
         ffmpeg \
-        postgresql && \
+        postgresql \
+        zstd && \
     apt-get upgrade -y --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
@@ -25,4 +26,11 @@ RUN apt-get update && \
 # their inline `pip install diff-cover` / `pip install tox` — the child
 # tox job and the diff-cover child job rely on TOX_BASE_IMAGE; the parent
 # `.tox-generate` job relies on TOX_GENERATE_IMAGE pointing at this image.
-RUN pip install --no-cache-dir diff-cover tox
+#
+# awscli is the S3 client the tox-pipeline template uses to push/pull the
+# .tox/ venv cache to the gitlab_tox_cache OCI bucket (paired with the apt
+# `zstd` above for the cache tarballs). awscli auto-selects path-style
+# addressing for the underscore bucket name and reads the reused
+# buildkit-cache AWS_* creds already injected into job pods. See docs
+# projects/ci-perf.md scope #9.
+RUN pip install --no-cache-dir diff-cover tox awscli

@@ -5,7 +5,7 @@ ARG KUBECONFORM_VERSION=0.6.7
 # renovate: datasource=github-releases depName=stackrox/kube-linter
 ARG KUBE_LINTER_VERSION=0.7.2
 # renovate: datasource=github-releases depName=open-policy-agent/conftest
-ARG CONFTEST_VERSION=0.67.0
+ARG CONFTEST_VERSION=0.68.2
 
 # Binaries are arm64-only — this image is built exclusively for linux/arm64
 # (the OKE self-hosted runner pool). The version ARGs are Renovate-managed via

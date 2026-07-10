@@ -1,7 +1,7 @@
 FROM python:3.14-slim-bookworm
 
 # renovate: datasource=github-releases depName=yannh/kubeconform
-ARG KUBECONFORM_VERSION=0.6.7
+ARG KUBECONFORM_VERSION=0.8.0
 # renovate: datasource=github-releases depName=stackrox/kube-linter
 ARG KUBE_LINTER_VERSION=0.8.3
 # renovate: datasource=github-releases depName=open-policy-agent/conftest

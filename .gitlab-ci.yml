@@ -1,36 +1,37 @@
-# All github-workflows refs pinned to the merge SHA of !31 (v0.0.48 — adds
-# TAG_OVERRIDE + TOX_BASE_IMAGE). Renovate will bump these on subsequent
-# template releases.
+# All github-workflows refs pinned to the merge SHA of !64 (v0.0.49 —
+# recompute-on-rebase in bump-version, so a 2nd renovate/CI MR in an ff run
+# self-heals its VERSION bump instead of conflicting). Renovate will bump
+# these on subsequent template releases.
 include:
   - project: 'tnoff-projects/github-workflows'
-    ref: 616a6485da3e2bc493ea25db2449378a5b1666fc
+    ref: cfe4637ce67d24b088e57e2f26db6ed9cc047f5b
     file: '/gitlab/tag.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: 616a6485da3e2bc493ea25db2449378a5b1666fc
+    ref: cfe4637ce67d24b088e57e2f26db6ed9cc047f5b
     file: '/gitlab/buildkit-docker-push.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: 616a6485da3e2bc493ea25db2449378a5b1666fc
+    ref: cfe4637ce67d24b088e57e2f26db6ed9cc047f5b
     file: '/gitlab/renovate.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: 616a6485da3e2bc493ea25db2449378a5b1666fc
+    ref: cfe4637ce67d24b088e57e2f26db6ed9cc047f5b
     file: '/gitlab/branch-cleanup.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: 616a6485da3e2bc493ea25db2449378a5b1666fc
+    ref: cfe4637ce67d24b088e57e2f26db6ed9cc047f5b
     file: '/gitlab/bump-version.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: 616a6485da3e2bc493ea25db2449378a5b1666fc
+    ref: cfe4637ce67d24b088e57e2f26db6ed9cc047f5b
     file: '/gitlab/trufflehog.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: 616a6485da3e2bc493ea25db2449378a5b1666fc
+    ref: cfe4637ce67d24b088e57e2f26db6ed9cc047f5b
     file: '/gitlab/discord-notify.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: 616a6485da3e2bc493ea25db2449378a5b1666fc
+    ref: cfe4637ce67d24b088e57e2f26db6ed9cc047f5b
     file: '/gitlab/trigger-bump.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: 616a6485da3e2bc493ea25db2449378a5b1666fc
+    ref: cfe4637ce67d24b088e57e2f26db6ed9cc047f5b
     file: '/gitlab/buildkit-build-check.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: 616a6485da3e2bc493ea25db2449378a5b1666fc
+    ref: cfe4637ce67d24b088e57e2f26db6ed9cc047f5b
     file: '/gitlab/trufflehog-image.yml'
 
 default:

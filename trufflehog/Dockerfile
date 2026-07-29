@@ -1,7 +1,7 @@
 FROM alpine:3
 
 # renovate: datasource=github-releases depName=trufflesecurity/trufflehog
-ARG TRUFFLEHOG_VERSION=3.95.9
+ARG TRUFFLEHOG_VERSION=3.96.0
 
 # CI image for the .trufflehog-image template. Bakes a pinned trufflehog
 # binary so the template no longer `curl | sh`-installs it from

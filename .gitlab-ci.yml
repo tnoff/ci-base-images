@@ -53,7 +53,6 @@ stages:
   - validate
   - build
   - tag
-  - notify
   - renovate
 
 # Renovate-driven patch bump on every /^renovate\// MR. Unlike the Python
@@ -542,29 +541,6 @@ trigger-cleanup-trufflehog:
     BUMP_SOURCE: 'ci-trufflehog'
     IMAGE: 'iad.ocir.io/tnoff/ci-trufflehog'
 
-notify-failure:
-  extends: .discord-notify
-  stage: notify
-  needs: [build, build-spellcheck, build-rust-tauri, build-k8s-lint, build-alpine-utils, build-pre-commit, build-terragrunt-utils, build-trufflehog, tag-build]
-  variables:
-    NOTIFY_TYPE: failure
-    DISCORD_WEBHOOK_URL: $DISCORD_BUILD_FAILURE_WEBHOOK
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
-      when: on_failure
-
-notify-renovate-failure:
-  extends: .discord-notify
-  stage: renovate
-  needs: [renovate]
-  variables:
-    NOTIFY_TYPE: failure
-    DISCORD_WEBHOOK_URL: $DISCORD_BUILD_FAILURE_WEBHOOK
-    NOTIFY_MESSAGE: 'Renovate failed'
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      when: on_failure
-
 renovate:
   extends: .renovate
   stage: renovate
@@ -586,15 +562,3 @@ branch-cleanup:
     DRY_RUN: "false"
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
-
-notify-cleanup-failure:
-  extends: .discord-notify
-  stage: renovate
-  needs: [branch-cleanup]
-  variables:
-    NOTIFY_TYPE: failure
-    DISCORD_WEBHOOK_URL: $DISCORD_BUILD_FAILURE_WEBHOOK
-    NOTIFY_MESSAGE: 'Branch cleanup failed'
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "schedule"
-      when: on_failure

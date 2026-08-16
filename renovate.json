@@ -13,5 +13,13 @@
         "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+ARG \\w+=(?<currentValue>[^\\s]+)"
       ]
     }
+  ],
+  "packageRules": [
+    {
+      "description": "Freeze the buildkit base image. v0.31 sends aws-chunked content encoding on the S3 cache export, which OCI Object Storage rejects with a 501 — that breaks every build importing or exporting the layer cache, in every repo on the .buildkit-build-check template. While the pin lived in a github-workflows job variable Renovate could not see it; a Dockerfile FROM line is visible to the dockerfile manager, so the freeze has to be explicit. Re-test the S3 cache path end to end before lifting this.",
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["moby/buildkit", "docker.io/moby/buildkit"],
+      "enabled": false
+    }
   ]
 }

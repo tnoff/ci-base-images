@@ -338,6 +338,50 @@ trufflehog-image-trufflehog:
     TRUFFLEHOG_IMAGE_TARBALL: trufflehog.tar
   rules: *trufflehog-image-rules
 
+# Both buildkit jobs deliberately pin BUILDKIT_IMAGE back to the UPSTREAM
+# literal, overriding the template default of $CI_BUILDKIT_IMAGE. The image
+# that builds ci-buildkit must never be ci-buildkit itself.
+#
+# Once this repo's github-workflows pin advances, every other build job here
+# runs on ci-buildkit:latest -- fine, and if that tag breaks those jobs fail
+# loudly. But the jobs that REBUILD it have to keep working, or the repo cannot
+# repair its own dependency and every .buildkit-build-check job in all ten
+# consumer repos stays broken until someone pushes an image by hand.
+#
+# That is not hypothetical. build-buildkit has no changes: gate, so it re-pushes
+# on every main pipeline, and a two-layer Dockerfile that rarely changes keeps
+# producing an identical digest -- so :latest and several :<sha> tags collapse
+# onto one manifest. The cleanup job excludes :latest by TAG NAME
+# (registry_client.py:462) but its digest protection only covers sub-manifests
+# of kept manifest lists, so pruning a :<sha> that shares the digest deletes the
+# manifest :latest points at. Consumer-side job variables win over the
+# template's under extends, so this override survives future pin bumps.
+build-check-buildkit:
+  extends: .buildkit-build-check
+  stage: validate
+  variables:
+    BUILDKIT_IMAGE: docker.io/moby/buildkit:v0.30.0
+    DOCKERFILE_DIR: buildkit
+    OUTPUT_NAME: ci-buildkit:ci
+    OUTPUT_TARBALL: buildkit.tar
+    CACHE_NAME: ci-base-images-buildkit
+  rules: &buildkit-image-rules
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_PROJECT_ID != $CI_PROJECT_ID
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - buildkit/**/*
+
+trufflehog-image-buildkit:
+  extends: .trufflehog-image
+  stage: validate
+  needs:
+    - job: build-check-buildkit
+      artifacts: true
+  variables:
+    TRUFFLEHOG_IMAGE_TARBALL: buildkit.tar
+  rules: *buildkit-image-rules
+
 # One :3.X mutable + :3.X-<short-sha> immutable tag per Python minor.
 # Add a new minor here AND in tox.ini together — matrix-sync-check enforces.
 build:
@@ -453,6 +497,20 @@ build-trufflehog:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
 
+build-buildkit:
+  extends: .buildkit-docker-push
+  stage: build
+  variables:
+    # Upstream, not $CI_BUILDKIT_IMAGE — see build-check-buildkit above.
+    BUILDKIT_IMAGE: docker.io/moby/buildkit:v0.30.0
+    DOCKERFILE_DIR: buildkit
+    CACHE_NAME: ci-base-images-buildkit
+  before_script:
+    - export OCI_REPO_NAME_64="$OCI_BUILDKIT_REPO_NAME_64"
+    - !reference [.buildkit-docker-push, before_script]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+
 tag-build:
   extends: .tag
   stage: tag
@@ -537,6 +595,14 @@ trigger-cleanup-trufflehog:
   variables:
     BUMP_SOURCE: 'ci-trufflehog'
     IMAGE: 'iad.ocir.io/tnoff/ci-trufflehog'
+
+trigger-cleanup-buildkit:
+  extends: .trigger-bump
+  stage: tag
+  needs: [build-buildkit]
+  variables:
+    BUMP_SOURCE: 'ci-buildkit'
+    IMAGE: 'iad.ocir.io/tnoff/ci-buildkit'
 
 renovate:
   extends: .renovate

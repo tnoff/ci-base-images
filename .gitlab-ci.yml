@@ -23,9 +23,6 @@ include:
     file: '/gitlab/trufflehog.yml'
   - project: 'tnoff-projects/github-workflows'
     ref: 9530be0ec03093026d61ade7a57556938812a829
-    file: '/gitlab/discord-notify.yml'
-  - project: 'tnoff-projects/github-workflows'
-    ref: 9530be0ec03093026d61ade7a57556938812a829
     file: '/gitlab/trigger-bump.yml'
   - project: 'tnoff-projects/github-workflows'
     ref: 9530be0ec03093026d61ade7a57556938812a829

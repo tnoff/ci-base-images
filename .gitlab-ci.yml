@@ -4,31 +4,31 @@
 # these on subsequent template releases.
 include:
   - project: 'tnoff-projects/github-workflows'
-    ref: c33d172e8bd7d622c3c4cdfca7b21bef07d5776b
+    ref: 499db253da0863e8705d4582d75ee253610934ac
     file: '/gitlab/tag.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: c33d172e8bd7d622c3c4cdfca7b21bef07d5776b
+    ref: 499db253da0863e8705d4582d75ee253610934ac
     file: '/gitlab/buildkit-docker-push.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: c33d172e8bd7d622c3c4cdfca7b21bef07d5776b
+    ref: 499db253da0863e8705d4582d75ee253610934ac
     file: '/gitlab/renovate.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: c33d172e8bd7d622c3c4cdfca7b21bef07d5776b
+    ref: 499db253da0863e8705d4582d75ee253610934ac
     file: '/gitlab/branch-cleanup.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: c33d172e8bd7d622c3c4cdfca7b21bef07d5776b
+    ref: 499db253da0863e8705d4582d75ee253610934ac
     file: '/gitlab/bump-version.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: c33d172e8bd7d622c3c4cdfca7b21bef07d5776b
+    ref: 499db253da0863e8705d4582d75ee253610934ac
     file: '/gitlab/trufflehog.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: c33d172e8bd7d622c3c4cdfca7b21bef07d5776b
+    ref: 499db253da0863e8705d4582d75ee253610934ac
     file: '/gitlab/trigger-bump.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: c33d172e8bd7d622c3c4cdfca7b21bef07d5776b
+    ref: 499db253da0863e8705d4582d75ee253610934ac
     file: '/gitlab/buildkit-build-check.yml'
   - project: 'tnoff-projects/github-workflows'
-    ref: c33d172e8bd7d622c3c4cdfca7b21bef07d5776b
+    ref: 499db253da0863e8705d4582d75ee253610934ac
     file: '/gitlab/trufflehog-image.yml'
 
 default:
